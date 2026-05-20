@@ -1,34 +1,32 @@
-from anthropic import Anthropic
-from anthropic.types import Message
+import os
+from openai import OpenAI
 
 
 class Claude:
     def __init__(self, model: str):
-        self.client = Anthropic()
+        self.client = OpenAI(
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            base_url=os.getenv("ANTHROPIC_BASE_URL")
+        )
+
         self.model = model
 
     def add_user_message(self, messages: list, message):
         user_message = {
             "role": "user",
-            "content": message.content
-            if isinstance(message, Message)
-            else message,
+            "content": str(message),
         }
         messages.append(user_message)
 
     def add_assistant_message(self, messages: list, message):
         assistant_message = {
             "role": "assistant",
-            "content": message.content
-            if isinstance(message, Message)
-            else message,
+            "content": str(message),
         }
         messages.append(assistant_message)
 
-    def text_from_message(self, message: Message):
-        return "\n".join(
-            [block.text for block in message.content if block.type == "text"]
-        )
+    def text_from_message(self, message):
+        return str(message)
 
     def chat(
         self,
@@ -39,26 +37,26 @@ class Claude:
         tools=None,
         thinking=False,
         thinking_budget=1024,
-    ) -> Message:
+    ):
+
+        if system:
+            messages.insert(
+                0,
+                {
+                    "role": "system",
+                    "content": system,
+                },
+            )
+
         params = {
             "model": self.model,
-            "max_tokens": 8000,
             "messages": messages,
             "temperature": temperature,
-            "stop_sequences": stop_sequences,
         }
-
-        if thinking:
-            params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": thinking_budget,
-            }
 
         if tools:
             params["tools"] = tools
 
-        if system:
-            params["system"] = system
+        response = self.client.chat.completions.create(**params)
 
-        message = self.client.messages.create(**params)
-        return message
+        return response.choices[0].message.content
