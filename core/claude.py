@@ -38,19 +38,11 @@ class Claude:
         thinking=False,
         thinking_budget=1024,
     ):
-
-        if system:
-            messages.insert(
-                0,
-                {
-                    "role": "system",
-                    "content": system,
-                },
-            )
+        all_messages = ([{"role": "system", "content": system}] + messages) if system else list(messages)
 
         params = {
             "model": self.model,
-            "messages": messages,
+            "messages": all_messages,
             "temperature": temperature,
         }
 
@@ -59,4 +51,4 @@ class Claude:
 
         response = self.client.chat.completions.create(**params)
 
-        return response.choices[0].message.content
+        return response
